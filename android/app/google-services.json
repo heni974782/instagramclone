@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "263909088413",
+    "project_id": "mobileapp-2a612",
+    "storage_bucket": "mobileapp-2a612.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:263909088413:android:c17a394cdee1ae6353c874",
+        "android_client_info": {
+          "package_name": "com.heni.fluttershare"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "263909088413-5rng16gejs3f62b5saq30jq032q0o92j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.heni.fluttershare",
+            "certificate_hash": "eb1358f69ad4c5937f4801b1042eecd7fe518cd8"
+          }
+        },
+        {
+          "client_id": "263909088413-l9bdgptejcm13sip99i5bmv9trp2gtbq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBHfWjKw4fbarjDRj-B42oZIAksMpoGBW4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "263909088413-l9bdgptejcm13sip99i5bmv9trp2gtbq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
