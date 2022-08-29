@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 
-//header() {
-//  return Text("header");
-AppBar header(context, {bool isAppTitle = false, required String titleText}) {
+AppBar header(context, {bool isAppTitle = false, String titleText = "", removeBackButton = false}) {
   return AppBar(
+    automaticallyImplyLeading: removeBackButton?  false : true ,
     title: Text(
-      isAppTitle ? 'FlutterShare' : titleText,
+      isAppTitle ? "EcamShare" : titleText,
       style: TextStyle(
-        color: Colors.white,
-        fontFamily: isAppTitle ? "Signatra" : '',
-        fontSize: isAppTitle ? 50 : 22,
-      ),
+          color: Colors.white, 
+          fontFamily: isAppTitle ? "Signatra" : "", 
+          fontSize: isAppTitle ? 50.0 : 22.0
+          ),
     ),
     centerTitle: true,
     backgroundColor: Theme.of(context).accentColor,

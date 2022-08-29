@@ -1,122 +1,143 @@
-import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:fluttershare/pages/activity_feed.dart';
+import 'package:fluttershare/models/user.dart';
 import 'package:fluttershare/pages/create_account.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:fluttershare/pages/activity_feed.dart';
 import 'package:fluttershare/pages/profile.dart';
 import 'package:fluttershare/pages/search.dart';
 import 'package:fluttershare/pages/timeline.dart';
 import 'package:fluttershare/pages/upload.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-
-FirebaseFirestore Firestore = FirebaseFirestore.instance;
+import 'package:firebase_storage/firebase_storage.dart';
 
 final GoogleSignIn googleSignIn = GoogleSignIn();
-final userRef = Firestore.collection('users');
+final FirebaseStorage storage = FirebaseStorage.instance;
+final Reference storageRef = storage.ref();
+final usersRef = FirebaseFirestore.instance.collection('users');
+final postsRef = FirebaseFirestore.instance.collection('posts');
+final commentsRef = FirebaseFirestore.instance.collection('comments');
+final followingsRef = FirebaseFirestore.instance.collection('following');
+final followersRef = FirebaseFirestore.instance.collection('followers');
+final activityFeedRef = FirebaseFirestore.instance.collection('feed');
 final DateTime timestamp = DateTime.now();
+User? currentUser; // store our user data
 
 class Home extends StatefulWidget {
   @override
   _HomeState createState() => _HomeState();
 }
+
 class _HomeState extends State<Home> {
   bool isAuth = false;
   late PageController pageController;
   int pageIndex = 0;
 
-  get usersRef => null;
   @override
   void initState() {
     super.initState();
     pageController = PageController();
     googleSignIn.onCurrentUserChanged.listen((account) {
-      handleSignIn(account!);
+      if (account != null) {
+        createUserInfirestore(); // create a new user
+        print('User signed in $account');
+        setState(() {
+          isAuth = true;
+        });
+      } else {
+        setState(() {
+          isAuth = false;
+        });
+      }
     }, onError: (err) {
-      print('Error signing in -- $err');
+      print('Error signing in: $err');
     });
-    //Reauthenticate user when app is open
+
     googleSignIn.signInSilently(suppressErrors: false).then((account) {
-      handleSignIn(account!);
+      if (account != null) {
+        createUserInfirestore();
+        print('User signed in $account');
+        setState(() {
+          isAuth = true;
+        });
+      } else {
+        setState(() {
+          isAuth = false;
+        });
+      }
     }).catchError((err) {
-      print('Error signing in silently -- $err');
+      print('Error signing in: $err');
     });
   }
+
+  createUserInfirestore() async {
+    //check if user exist in the DB
+    final GoogleSignInAccount? user = googleSignIn.currentUser;
+    DocumentSnapshot doc = await usersRef.doc(user!.id).get();
+    // create new user he doesn't exist
+    if (!doc.exists) {
+      final username = await Navigator.push(
+          context, MaterialPageRoute(builder: (context) => CreateAccount()));
+
+      usersRef.doc(user.id).set({
+        "id": user.id,
+        "username": username,
+        "photoUrl": user.photoUrl,
+        "email": user.email,
+        "displayName": user.displayName,
+        "bio": "",
+        "timestamp": timestamp,
+      });
+
+      doc = await usersRef.doc(user.id).get();
+    }
+
+    currentUser = User.fromDocument(doc);
+    print(currentUser);
+    print(currentUser!.username);
+  }
+
   @override
   void dispose() {
     pageController.dispose();
     super.dispose();
   }
 
-  createUserInFirestore() async {
-    // Check if users exist in users collection in database (based on their id)
-    final GoogleSignInAccount? user = googleSignIn.currentUser;
-
-    final DocumentSnapshot doc = await usersRef.document(user?.id).get();
-
-    // If user doesn't exist, then take to creat account page
-    if (!doc.exists) {
-      final username = await Navigator.push(
-          context, MaterialPageRoute(builder: (context) => CreateAccount()));
-
-      // TODO: Get username from create account, use it to make new user document in users collection
-      usersRef.document(user?.id).setData({
-        "id": user?.id,
-        "username": username,
-        "photoUrl": user?.photoUrl,
-        "email": user?.email,
-        "displayName": user?.displayName,
-        "bio": "",
-        "timestamp": timestamp,
-      });
-    }
-  }
-
-  handleSignIn(GoogleSignInAccount account) {
-    if (account != null) {
-      print('User has signed in -- $account');
-      createUserInFirestore();
-      setState(() {
-        isAuth = true;
-      });
-    } else {
-      setState(() {
-        isAuth = false;
-      });
-    }
-  }
   login() {
     googleSignIn.signIn();
   }
+
   logout() {
     googleSignIn.signOut();
   }
+
   onPageChanged(int pageIndex) {
     setState(() {
       this.pageIndex = pageIndex;
     });
   }
+
   onTap(int pageIndex) {
     pageController.animateToPage(
       pageIndex,
-      duration: Duration(milliseconds: 200),
+      duration: Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
   }
+
   Scaffold buildAuthScreen() {
     return Scaffold(
       body: PageView(
         children: <Widget>[
           //Timeline(),
-          RaisedButton(
+          ElevatedButton(
             child: Text('Logout'),
             onPressed: logout,
           ),
           ActivityFeed(),
-          Upload(),
+          Upload(currentUser: currentUser),
           Search(),
-          Profile(),
+          Profile(profileId: currentUser?.id),
         ],
         controller: pageController,
         onPageChanged: onPageChanged,
@@ -136,7 +157,7 @@ class _HomeState extends State<Home> {
           BottomNavigationBarItem(
             icon: Icon(
               Icons.photo_camera,
-              size: 35,
+              size: 35.0,
             ),
           ),
           BottomNavigationBarItem(
@@ -148,46 +169,45 @@ class _HomeState extends State<Home> {
         ],
       ),
     );
-    // return RaisedButton(
-    //   child: Text('Logout'),
-    //   onPressed: logout,
-    // );
+    //return ElevatedButton(
+    //child: Text('Logout'),
+    //onPressed: logout,
+    //);
   }
-  Scaffold bulidUnAuthScreen() {
+
+  buildUnAuthScreen() {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomLeft,
-              colors: [
-                Theme.of(context).accentColor,
-                Theme.of(context).primaryColor,
-              ]),
-        ),
+            gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [
+            Theme.of(context).primaryColor,
+            Theme.of(context).accentColor,
+          ],
+        )),
         alignment: Alignment.center,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
-            Text(
-              'FlutterShare',
-              style: TextStyle(
-                fontFamily: "Signatra",
-                fontSize: 90,
-                color: Colors.white,
-              ),
-            ),
+            Text('Mieux que insta',
+                style: TextStyle(
+                    fontFamily: "Signatra",
+                    fontSize: 90.0,
+                    color: Colors.white)),
             GestureDetector(
-              onTap: login,
+              onTap: login(),
               child: Container(
-                width: 260,
-                height: 60,
+                width: 260.0,
+                height: 60.0,
                 decoration: BoxDecoration(
-                    image: DecorationImage(
-                      image: AssetImage('assets/images/google_signin_button.png'),
-                      fit: BoxFit.cover,
-                    )),
+                  image: DecorationImage(
+                      image:
+                          AssetImage('assets/images/google_signin_button.png'),
+                      fit: BoxFit.cover),
+                ),
               ),
             )
           ],
@@ -195,8 +215,9 @@ class _HomeState extends State<Home> {
       ),
     );
   }
+
   @override
   Widget build(BuildContext context) {
-    return isAuth ? buildAuthScreen() : bulidUnAuthScreen();
+    return isAuth ? buildAuthScreen() : buildUnAuthScreen();
   }
 }
